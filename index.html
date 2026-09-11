@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ئالىمجان ئابلىكىم — 技术画像</title>
+
+<!-- Google Fonts: Noto Sans Arabic（支持维吾尔语） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['-apple-system','BlinkMacSystemFont','"SF Pro SC"','"PingFang SC"','"Microsoft YaHei"','sans-serif'],
+          ug: ['"Noto Sans Arabic"','"UKIJ Tuz"','"UKIJ Ekran"','"Microsoft Uighur"','sans-serif'],
+        },
+        boxShadow: {
+          card: '0 1px 2px rgba(15,23,42,.04), 0 4px 12px rgba(15,23,42,.04)',
+          cardHover: '0 4px 12px rgba(37,99,235,.08), 0 16px 40px rgba(37,99,235,.12)',
+        },
+      }
+    }
+  }
+</script>
+
+<!-- React -->
+<script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<!-- Babel -->
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.6/babel.min.js"></script>
+<!-- Framer Motion -->
+<script src="https://cdn.jsdelivr.net/npm/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+<style>
+  html { scroll-behavior: smooth; }
+  body {
+    background: #f8fafc;
+    background-image:
+      radial-gradient(at 0% 0%, rgba(59,130,246,.08) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(37,99,235,.06) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(29,78,216,.05) 0px, transparent 50%);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+  }
+
+  /* 维吾尔语：RTL + Noto Sans Arabic */
+  .ug {
+    font-family: "Noto Sans Arabic","UKIJ Tuz","UKIJ Ekran","Microsoft Uighur",sans-serif;
+    direction: rtl;
+    unicode-bidi: isolate;
+    font-feature-settings: "liga" 1, "calt" 1;
+    letter-spacing: 0;
+  }
+  /* 维吾尔语名字专用：单独一行时居中 */
+  .ug-center { direction: rtl; text-align: center; }
+
+  .glass {
+    background: rgba(255,255,255,.72);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient 6s ease infinite;
+  }
+  .card-shine { position: relative; overflow: hidden; }
+  .card-shine::before {
+    content:''; position:absolute; top:0; left:-100%;
+    width:100%; height:100%;
+    background: linear-gradient(90deg, transparent, rgba(59,130,246,.06), transparent);
+    transition: left .6s;
+  }
+  .card-shine:hover::before { left: 100%; }
+  ::-webkit-scrollbar { width:10px; }
+  ::-webkit-scrollbar-track { background:#f1f5f9; }
+  ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:5px; border:2px solid #f1f5f9; }
+  ::-webkit-scrollbar-thumb:hover { background:#94a3b8; }
+  @keyframes gradient {
+    0%,100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  .icon-svg { display:inline-block; vertical-align:middle; flex-shrink:0; }
+  #root:empty::after {
+    content:"加载中…";
+    display:block;text-align:center;padding:100px 20px;
+    color:#94a3b8;font-family:-apple-system,sans-serif;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+const { motion, useInView, useScroll, useSpring } = window.Motion;
+
+/* ---------- 内联 SVG 图标 ---------- */
+const Svg = ({ size=16, children, ...p }) => (
+  <svg className="icon-svg" width={size} height={size}
+    viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    {children}
+  </svg>
+);
+
+const Icons = {
+  Smartphone: (p) => <Svg {...p}><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></Svg>,
+  Monitor:    (p) => <Svg {...p}><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></Svg>,
+  Globe:      (p) => <Svg {...p}><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></Svg>,
+  Server:     (p) => <Svg {...p}><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/></Svg>,
+  Cloud:      (p) => <Svg {...p}><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></Svg>,
+  Bot:        (p) => <Svg {...p}><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 14h.01M16 14h.01M9 18h6"/></Svg>,
+  Puzzle:     (p) => <Svg {...p}><path d="M19.4 13.5a1.6 1.6 0 0 0 0-3.1V7a1 1 0 0 0-1-1h-3.4a1.6 1.6 0 1 1-3.2 0H8a1 1 0 0 0-1 1v3.4a1.6 1.6 0 1 0 0 3.2V17a1 1 0 0 0 1 1h3.4a1.6 1.6 0 1 1 3.2 0H17a1 1 0 0 0 1-1v-3.5z"/></Svg>,
+  Languages:  (p) => <Svg {...p}><path d="M4 5h7M9 3v2c0 4-2 7-5 8M5 9c0 3 2 5 5 6M14 19l3-8 3 8M15.5 16h5"/></Svg>,
+  Code2:      (p) => <Svg {...p}><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></Svg>,
+  Cpu:        (p) => <Svg {...p}><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></Svg>,
+  Zap:        (p) => <Svg {...p}><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></Svg>,
+  Award:      (p) => <Svg {...p}><circle cx="12" cy="8" r="6"/><path d="M15.5 13.5L17 22l-5-3-5 3 1.5-8.5"/></Svg>,
+  TrendingUp: (p) => <Svg {...p}><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></Svg>,
+  Users:      (p) => <Svg {...p}><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></Svg>,
+  Briefcase:  (p) => <Svg {...p}><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></Svg>,
+  Github:     (p) => <Svg {...p}><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></Svg>,
+  Link:       (p) => <Svg {...p}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></Svg>,
+  Check:      (p) => <Svg {...p}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></Svg>,
+  Alert:      (p) => <Svg {...p}><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></Svg>,
+  Sparkles:   (p) => <Svg {...p}><path d="M12 3l1.9 5.8L20 10.7l-5.8 1.9L12 18.4l-1.9-5.8L4 10.7l6.1-1.9L12 3z"/><path d="M19 15l.9 2.6L22 18.5l-2.1.9L19 22l-.9-2.6L16 18.5l2.1-.9L19 15z"/></Svg>,
+  Star:       (p) => <Svg {...p}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></Svg>,
+};
+
+/* ---------- 数据 ---------- */
+const stacks = [
+  { icon:"Smartphone", title:"移动端", color:"brand", desc:"Flutter、uni-app、鸿蒙", tags:["Flutter","uni-app","鸿蒙"] },
+  { icon:"Monitor",    title:"桌面端", color:"emerald", desc:"PyQt5/6、Tauri、Wails、Tkinter", tags:["PyQt5/6","Tauri","Wails"] },
+  { icon:"Globe",      title:"Web 前端", color:"orange", desc:"React、Vue3、Next.js、Tailwind", tags:["React","Vue3","Next.js"] },
+  { icon:"Server",     title:"后端", color:"purple", desc:"FastAPI、Flask、Deno、Node.js", tags:["FastAPI","Flask","Deno"] },
+  { icon:"Cloud",      title:"云 & 部署", color:"brand", desc:"Cloudflare、Deno Deploy、Docker", tags:["Cloudflare","Deno Deploy","Docker"] },
+  { icon:"Bot",        title:"AI 集成", color:"emerald", desc:"DeepSeek、Kimi、Qwen、OpenAI、MCP", tags:["DeepSeek","OpenAI","MCP"] },
+  { icon:"Puzzle",     title:"浏览器扩展", color:"orange", desc:"Manifest V2/V3，6 个浏览器", tags:["Manifest V2/V3"] },
+  { icon:"Languages",  title:"维吾尔语", color:"purple", desc:"UKIJ 字体、RTL、双语", tags:["UKIJ","RTL"] },
+];
+
+const skills = [
+  { name:"Flutter 应用开发", lv:95, color:"brand" },
+  { name:"Python 后端", lv:92, color:"brand" },
+  { name:"Cloudflare 全家桶", lv:95, color:"brand" },
+  { name:"TypeScript / JS", lv:90, color:"brand" },
+  { name:"Vue 3 生态", lv:88, color:"emerald" },
+  { name:"React 生态", lv:85, color:"emerald" },
+  { name:"Rust / Tauri", lv:82, color:"orange" },
+  { name:"Go / Wails", lv:75, color:"orange" },
+  { name:"Deno / Hono", lv:78, color:"purple" },
+  { name:"会计 / 税务", lv:95, color:"brand" },
+  { name:"维吾尔语 / RTL", lv:98, color:"brand" },
+  { name:"开源运营", lv:35, color:"purple" },
+];
+
+const projects = [
+  { cat:"知识产权代理", catColor:"brand", items:[
+    { t:"喀什财运 · 商标代理财务", d:"22 个科目，税务模拟，Cloudflare D1 云备份", s:["PyQt5","SQLite","D1"] },
+    { t:"知识产权 CRM 系统", d:"客户 / 案件 / 合同 / 任务 / 文件管理，完成度 99%", s:["Flask","SQLite","Tailwind"] },
+    { t:"IP-CRM", d:"知识产权代理管理系统重写版，33 条测试", s:["Deno","Hono","Deno KV"] },
+    { t:"云知识产权代理管理系统", d:"客户 / 业务 / 项目 / 案件 / 文档 / 财务 / 流程全链路", s:["Tauri","Vue3","Rust"] },
+    { t:"合同管理系统", d:"中维双语，通知书生成，纯前端无需部署", s:["HTML5","IndexedDB","XLSX.js"] },
+    { t:"商标交易平台", d:"跨平台（Android / iOS / 鸿蒙），双语，AI 智能客服", s:["Flutter","Node.js","MongoDB"] },
+  ]},
+  { cat:"记账 / 税务 / 财务", catColor:"emerald", items:[
+    { t:"ھسابىم (uyghur-book)", d:"维吾尔语优先的离线多账本记账 + 报税提醒", s:["Flutter","Riverpod","drift"] },
+    { t:"TaxLedger", d:"腾讯云 OCR 智能发票记账，双引擎识别", s:["FastAPI","SQLAlchemy","JS"] },
+    { t:"餐饮成本记录与税务合规", d:"面向餐饮老板，建立税务局认可的成本证据链", s:["Python","PyQt5","SQLite"] },
+    { t:"账管家 (Books Manager)", d:"三种会计模式，个税计算器，原子快照备份", s:["Tauri","React","Rust"] },
+    { t:"财运简易记账 App", d:"零会计基础个体户记账，OCR 识别，税务估算", s:["uni-app","Vue3","Pinia"] },
+    { t:"财税管家系统", d:"财税服务管理，AI 智能开票，支持 4 种大模型", s:["FastAPI","SQLite","JS"] },
+  ]},
+  { cat:"零售 / 进销存", catColor:"orange", items:[
+    { t:"收银台 · 安卓版", d:"收银 + 进销存 + 财务，扫码枪 / 电子秤", s:["Flutter","WebView"] },
+    { t:"库存管理系统", d:"面向新疆少数民族商户，单 EXE 无依赖", s:["Wails","Go","SQLite"] },
+    { t:"泰来超市管理系统", d:"维吾尔语优先，完整超市管理，SaaS 80 元 / 月", s:["Tauri","Vue3","Element Plus"] },
+  ]},
+  { cat:"维吾尔语工具", catColor:"purple", items:[
+    { t:"wechat-rescue", d:"免 root 微信媒体恢复，.dat 解码，UKIJ 字体", s:["Flutter","UKIJ"] },
+    { t:"财运 PDF to Image", d:"PDF 批量转图片，中维双语，智能重命名", s:["PyQt5","PyMuPDF"] },
+    { t:"传说理发店会员系统", d:"理发店会员管理，尾号搜索，双语 RTL", s:["Vue3","Vant"] },
+    { t:"维汉互译工具", d:"小牛翻译 API，UKIJ 字体，Word 导出", s:["Tkinter","小牛翻译"] },
+    { t:"NextList-ug", d:"Next.js + 维吾尔语项目", s:["Next.js","TypeScript"] },
+  ]},
+  { cat:"开发者工具", catColor:"brand", items:[
+    { t:"Cloudflare Manager", d:"移动版 + 桌面版，覆盖 Cloudflare 全部免费功能", s:["Flutter","Tauri","Rust"] },
+    { t:"GitWorks (github-proxy)", d:"一键建仓 + 推送，多平台发布，MCP Server，R2 缓存", s:["Workers","Hono","R2"] },
+    { t:"超级U盘开发环境", d:"便携式开发环境，内置 VS Code / Python / Node.js", s:["PyQt6","Go","GPL-3.0"] },
+  ]},
+  { cat:"个人 / 其他", catColor:"emerald", items:[
+    { t:"心理健康记录系统", d:"用药 / 症状记录，PWA，邮件提醒", s:["Flask","PWA"] },
+    { t:"Talay-WOL", d:"Wake-on-LAN 远程控制，Armbian + Windows", s:["Flask","WOL","Armbian"] },
+    { t:"财运公众号助手", d:"AI 生成文章，6 个浏览器扩展", s:["浏览器扩展","硅基流动"] },
+    { t:"TrendRadar", d:"35 个平台热点监控，智能关键词筛选", s:["HTML","多平台推送"] },
+  ]},
+];
+
+const timeline = [
+  { yr:"2024", ev:["泰来团队","成立"] },
+  { yr:"2025.12", ev:["Talay-WOL"," 创建"] },
+  { yr:"2026.02", ev:["泰来超市"," v1.0.0 发布"] },
+  { yr:"2026.04", ev:["泰来超市"," v1.1.0（SaaS 版）"] },
+  { yr:"2026.09", ev:["github-proxy"," 与 ","IP-CRM"," 创建"] },
+];
+
+const colorMap = {
+  brand:   { bg:"bg-blue-50",    text:"text-blue-600",    bar:"from-blue-600 to-blue-400",       dot:"bg-blue-500" },
+  emerald: { bg:"bg-emerald-50", text:"text-emerald-600", bar:"from-emerald-600 to-emerald-400", dot:"bg-emerald-500" },
+  orange:  { bg:"bg-orange-50",  text:"text-orange-600",  bar:"from-orange-600 to-orange-400",   dot:"bg-orange-500" },
+  purple:  { bg:"bg-purple-50",  text:"text-purple-600",  bar:"from-purple-600 to-purple-400",   dot:"bg-purple-500" },
+};
+
+/* ---------- 滚动进度条 ---------- */
+function ScrollProgress() {
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 120, damping: 30, restDelta: .001 });
+  return (
+    <motion.div style={{ scaleX }}
+      className="fixed top-0 left-0 right-0 h-1 origin-left bg-gradient-to-r from-blue-600 via-blue-500 to-blue-400 z-[100]" />
+  );
+}
+
+/* ---------- 入场动画 ---------- */
+function Reveal({ children, delay = 0, y = 28 }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-80px" });
+  return (
+    <motion.div ref={ref}
+      initial={{ opacity: 0, y }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: .55, delay, ease: [0.16, 1, 0.3, 1] }}>
+      {children}
+    </motion.div>
+  );
+}
+
+/* ---------- 技能条 ---------- */
+function SkillBar({ name, lv, color, delay }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+  const c = colorMap[color];
+  return (
+    <motion.div ref={ref}
+      initial={{ opacity: 0, y: 20, scale: .96 }}
+      animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+      transition={{ duration: .45, delay, ease: [0.16, 1, 0.3, 1] }}
+      whileHover={{ y: -4 }}
+      className="bg-white rounded-2xl p-5 shadow-card border border-slate-200/70 hover:border-blue-200 transition-colors card-shine">
+      <div className="flex justify-between items-center mb-3">
+        <span className="text-sm font-semibold text-slate-900">{name}</span>
+        <span className={`text-xs font-bold ${c.text} tabular-nums px-2 py-0.5 rounded-md ${c.bg}`}>{lv}</span>
+      </div>
+      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={inView ? { width: `${lv}%` } : {}}
+          transition={{ duration: 1.1, delay: delay + .2, ease: [0.16, 1, 0.3, 1] }}
+          className={`h-full rounded-full bg-gradient-to-r ${c.bar} relative`}>
+          <div className="absolute right-0 top-0 h-full w-2 bg-white/40 rounded-full" />
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ---------- 区块标题 ---------- */
+function SectionHead({ icon, title, count }) {
+  return (
+    <Reveal>
+      <div className="flex items-center gap-3 mt-20 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
+          {icon}
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{title}</h2>
+        {count && (
+          <span className="text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1 rounded-full">
+            {count}
+          </span>
+        )}
+      </div>
+    </Reveal>
+  );
+}
+
+/* ---------- 主应用 ---------- */
+function App() {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const stats = [
+    { icon:<Icons.Briefcase size={16} />, label:"项目总数", value:"27+", color:"brand" },
+    { icon:<Icons.Code2 size={16} />,     label:"技术栈",   value:"20+", color:"emerald" },
+    { icon:<Icons.Star size={16} />,      label:"核心技能", value:"12",  color:"orange" },
+    { icon:<Icons.Users size={16} />,     label:"目标用户", value:"新疆中小商户", color:"purple" },
+  ];
+  const statColor = {
+    brand:   "from-blue-600 to-blue-400 shadow-blue-500/25",
+    emerald: "from-emerald-600 to-emerald-400 shadow-emerald-500/25",
+    orange:  "from-orange-600 to-orange-400 shadow-orange-500/25",
+    purple:  "from-purple-600 to-purple-400 shadow-purple-500/25",
+  };
+
+  return (
+    <div className="max-w-[1120px] mx-auto px-5 pb-24">
+      <ScrollProgress />
+
+      {/* 导航 */}
+      <motion.nav
+        initial={{ y: -60, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: .6, ease: [0.16, 1, 0.3, 1] }}
+        className={`sticky top-0 z-50 -mx-5 px-5 py-3 transition-all duration-300 ${
+          scrolled ? "glass border-b border-slate-200/70 shadow-sm" : "bg-transparent"
+        }`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white font-bold text-sm shadow-md shadow-blue-500/25 ug-center">ئا</div>
+            <span className="ug text-base font-bold text-slate-900 hidden sm:block">ئالىمجان ئابلىكىم</span>
+          </div>
+          <div className="flex gap-2">
+            <motion.a whileHover={{ y:-2 }} whileTap={{ scale:.97 }}
+              href="https://gitee.com/alim-talay" target="_blank"
+              className="text-xs text-slate-600 hover:text-blue-600 px-3 py-1.5 rounded-full border border-slate-200 bg-white/70 transition-colors flex items-center gap-1.5">
+              <Icons.Link size={12} /> Gitee
+            </motion.a>
+            <motion.a whileHover={{ y:-2 }} whileTap={{ scale:.97 }}
+              href="https://github.com/talay0998" target="_blank"
+              className="text-xs text-slate-600 hover:text-blue-600 px-3 py-1.5 rounded-full border border-slate-200 bg-white/70 transition-colors flex items-center gap-1.5">
+              <Icons.Github size={12} /> GitHub
+            </motion.a>
+          </div>
+        </div>
+      </motion.nav>
+
+      {/* 封面 */}
+      <header className="relative text-center pt-20 pb-16">
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <motion.div animate={{ x:[0,30,0], y:[0,-20,0] }} transition={{ duration:12, repeat:Infinity, ease:"easeInOut" }}
+            className="absolute top-10 left-[10%] w-72 h-72 bg-blue-400/20 rounded-full blur-3xl" />
+          <motion.div animate={{ x:[0,-30,0], y:[0,20,0] }} transition={{ duration:14, repeat:Infinity, ease:"easeInOut" }}
+            className="absolute top-20 right-[10%] w-72 h-72 bg-indigo-400/20 rounded-full blur-3xl" />
+        </div>
+
+        <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:.5 }}
+          className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-4 py-1.5 rounded-full mb-6">
+          <Icons.Sparkles size={12} /> Developer Profile
+        </motion.div>
+
+        {/* 维吾尔语名字：RTL + Noto Sans Arabic */}
+        <motion.h1 initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }}
+          transition={{ duration:.7, delay:.1, ease:[0.16,1,0.3,1] }}
+          className="ug ug-center text-5xl md:text-6xl font-bold leading-tight mb-4 gradient-text"
+          dir="rtl" lang="ug">
+          ئالىمجان ئابلىكىم
+        </motion.h1>
+
+        <motion.p initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }}
+          transition={{ duration:.7, delay:.2 }}
+          className="text-base text-slate-600 max-w-2xl mx-auto leading-relaxed mb-8">
+          全栈型实战独立开发者。围绕新疆喀什中小商户与机构，做记账、税务、知识产权与维吾尔语工具矩阵。
+        </motion.p>
+
+        <motion.div initial={{ opacity:0, y:28 }} animate={{ opacity:1, y:0 }}
+          transition={{ duration:.7, delay:.3 }}
+          className="flex flex-wrap gap-3 justify-center">
+          {[
+            { href:"https://gitee.com/alim-talay", icon:<Icons.Link size={14} />, label:"Gitee" },
+            { href:"https://github.com/talay0998", icon:<Icons.Github size={14} />, label:"GitHub" },
+            { href:"https://talay.ltd",            icon:<Icons.Globe size={14} />, label:"talay.ltd" },
+          ].map((l, i) => (
+            <motion.a key={i} href={l.href} target="_blank"
+              whileHover={{ y:-3 }} whileTap={{ scale:.97 }}
+              className="text-sm text-slate-600 bg-white border border-slate-200 px-5 py-2.5 rounded-full shadow-card hover:text-blue-600 hover:border-blue-300 transition-colors flex items-center gap-2">
+              {l.icon} {l.label}
+            </motion.a>
+          ))}
+        </motion.div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-14 max-w-3xl mx-auto">
+          {stats.map((s, i) => (
+            <Reveal key={i} delay={i * .08}>
+              <motion.div whileHover={{ y:-4 }}
+                className="bg-white rounded-2xl p-4 shadow-card border border-slate-200/70 card-shine">
+                <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${statColor[s.color]} flex items-center justify-center text-white mb-3 shadow-md`}>
+                  {s.icon}
+                </div>
+                <div className="text-xl font-bold text-slate-900 mb-0.5 tabular-nums">{s.value}</div>
+                <div className="text-xs text-slate-600">{s.label}</div>
+              </motion.div>
+            </Reveal>
+          ))}
+        </div>
+      </header>
+
+      {/* 技术栈 */}
+      <SectionHead icon={<Icons.Cpu size={18} />} title="技术栈" count="8 大领域" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {stacks.map((s, i) => {
+          const c = colorMap[s.color];
+          const I = Icons[s.icon];
+          return (
+            <Reveal key={i} delay={i * .05}>
+              <motion.div whileHover={{ y:-5 }}
+                transition={{ type:"spring", stiffness:300, damping:20 }}
+                className="bg-white rounded-2xl p-5 shadow-card border border-slate-200/70 hover:border-blue-200 transition-colors h-full card-shine">
+                <motion.div whileHover={{ rotate:[0,-8,8,0], transition:{ duration:.5 } }}
+                  className={`w-11 h-11 rounded-xl ${c.bg} ${c.text} flex items-center justify-center mb-3`}>
+                  <I size={20} />
+                </motion.div>
+                <h3 className="text-sm font-semibold text-slate-900 mb-1">{s.title}</h3>
+                <p className="text-xs text-slate-600 leading-relaxed mb-3">{s.desc}</p>
+                <div className="flex flex-wrap gap-1">
+                  {s.tags.map((t, j) => (
+                    <span key={j} className="text-[10px] text-slate-600 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded">{t}</span>
+                  ))}
+                </div>
+              </motion.div>
+            </Reveal>
+          );
+        })}
+      </div>
+
+      {/* 核心技能 */}
+      <SectionHead icon={<Icons.Zap size={18} />} title="核心技能" count="12 项" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {skills.map((s, i) => <SkillBar key={i} {...s} delay={i * .04} />)}
+      </div>
+
+      {/* 产品矩阵 */}
+      <SectionHead icon={<Icons.Briefcase size={18} />} title="产品矩阵" count="27 个项目" />
+      {projects.map((group, gi) => {
+        const c = colorMap[group.catColor];
+        return (
+          <div key={gi} className="mt-10">
+            <Reveal>
+              <h3 className={`flex items-center gap-2 text-xs font-bold tracking-widest uppercase ${c.text} mb-4`}>
+                <span className={`w-2 h-2 rounded-full ${c.dot}`}></span>
+                {group.cat}
+              </h3>
+            </Reveal>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {group.items.map((p, pi) => (
+                <Reveal key={pi} delay={pi * .06}>
+                  <motion.div whileHover={{ y:-6 }}
+                    transition={{ type:"spring", stiffness:300, damping:22 }}
+                    className="bg-white rounded-2xl p-5 shadow-card border border-slate-200/70 hover:border-blue-200 transition-colors h-full flex flex-col cursor-default card-shine">
+                    <div className={`text-[10px] font-bold tracking-wider uppercase ${c.text} mb-2`}>{group.cat}</div>
+                    <h4 className="text-base font-semibold text-slate-900 mb-2 leading-snug">{p.t}</h4>
+                    <p className="text-xs text-slate-600 leading-relaxed flex-1 mb-4">{p.d}</p>
+                    <div className="flex flex-wrap gap-1.5 pt-3 border-t border-slate-200/60">
+                      {p.s.map((t, j) => (
+                        <span key={j} className="text-[10px] text-slate-600 bg-slate-50 border border-slate-200/60 px-2 py-1 rounded">{t}</span>
+                      ))}
+                    </div>
+                  </motion.div>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* 时间线 */}
+      <SectionHead icon={<Icons.TrendingUp size={18} />} title="时间线" count="2024 — 2026" />
+      <div className="bg-white rounded-2xl shadow-card border border-slate-200/70 overflow-hidden">
+        {timeline.map((t, i) => (
+          <Reveal key={i} delay={i * .08}>
+            <motion.div whileHover={{ backgroundColor:"#f8fafc" }}
+              className="grid grid-cols-[90px_1fr] md:grid-cols-[130px_1fr] gap-5 px-7 py-5 border-b border-slate-200/60 last:border-b-0 transition-colors">
+              <span className="text-sm font-bold text-blue-600 tabular-nums flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                {t.yr}
+              </span>
+              <span className="text-sm text-slate-600">
+                {t.ev.map((seg, j) =>
+                  j % 2 === 0
+                    ? <b key={j} className="text-slate-900 font-semibold">{seg}</b>
+                    : <span key={j}>{seg}</span>
+                )}
+              </span>
+            </motion.div>
+          </Reveal>
+        ))}
+      </div>
+
+      {/* 总结 */}
+      <SectionHead icon={<Icons.Award size={18} />} title="总结" />
+      <div className="grid md:grid-cols-2 gap-4">
+        <Reveal>
+          <motion.div whileHover={{ y:-4 }}
+            className="bg-white rounded-2xl p-7 shadow-card border border-slate-200/70 hover:border-emerald-200 transition-colors h-full card-shine">
+            <h4 className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-emerald-600 mb-4">
+              <Icons.Check size={14} /> 优势
+            </h4>
+            <ul className="space-y-3">
+              {[
+                "技术面极宽，覆盖八大领域",
+                "根据场景选技术，不追新不局限",
+                "会计 / 税务知识扎实",
+                "有软件工程规范与产品规划",
+                "数据安全意识强",
+                "持续投入维吾尔语工具",
+                "有实际业务场景与公司实体",
+                "AI 集成深度高",
+                "跟进新技术（Deno / MCP / 鸿蒙）",
+              ].map((t, i) => (
+                <li key={i} className="flex gap-3 text-sm text-slate-600">
+                  <span className="text-emerald-500 mt-0.5 shrink-0"><Icons.Check size={16} /></span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </Reveal>
+
+        <Reveal delay={.1}>
+          <motion.div whileHover={{ y:-4 }}
+            className="bg-white rounded-2xl p-7 shadow-card border border-slate-200/70 hover:border-orange-200 transition-colors h-full card-shine">
+            <h4 className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-orange-600 mb-4">
+              <Icons.Alert size={14} /> 短板
+            </h4>
+            <ul className="space-y-3">
+              {[
+                "开源运营和社区还没起来",
+                "star 少，无正式发行版",
+                "测试覆盖仅部分项目",
+                "商业化刚起步",
+                "品牌影响力低",
+              ].map((t, i) => (
+                <li key={i} className="flex gap-3 text-sm text-slate-600">
+                  <span className="text-orange-500 mt-0.5 shrink-0"><Icons.Alert size={16} /></span>
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </Reveal>
+      </div>
+
+      <Reveal delay={.2}>
+        <motion.div whileHover={{ y:-4 }}
+          className="mt-6 rounded-2xl p-8 shadow-card border border-blue-100 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-blue-200/30 rounded-full blur-3xl"></div>
+          <div className="relative z-10">
+            <span className="text-blue-600 inline-block mb-4"><Icons.Sparkles size={20} /></span>
+            <p className="text-base text-slate-900 leading-relaxed font-medium">
+              全栈型实战独立开发者。技术面覆盖移动端、Web、桌面、后端、云、AI、浏览器扩展和系统运维，围绕新疆喀什中小商户和机构做工具矩阵，会计 / 税务知识扎实，有软件工程规范和产品规划能力，持续投入维吾尔语工具，但开源运营和商业化还在早期。
+            </p>
+          </div>
+        </motion.div>
+      </Reveal>
+
+      {/* 页脚 */}
+      <footer className="text-center mt-20 pt-8 border-t border-slate-200/60 text-xs text-slate-400">
+        <p>喀什财运商标代理有限责任公司 · 泰来团队</p>
+        <div className="mt-3 flex justify-center gap-3">
+          <a href="https://gitee.com/alim-talay" target="_blank" className="hover:text-blue-600 transition-colors">Gitee</a>
+          <span>·</span>
+          <a href="https://github.com/talay0998" target="_blank" className="hover:text-blue-600 transition-colors">GitHub</a>
+          <span>·</span>
+          <a href="https://talay.ltd" target="_blank" className="hover:text-blue-600 transition-colors">talay.ltd</a>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
